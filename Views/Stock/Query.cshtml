@@ -1,0 +1,235 @@
+@model StockAnalysis.ViewModels.StockQueryViewModel
+@{
+    ViewData["Title"] = "股票查詢";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="fw-bold"><i class="bi bi-search text-primary me-2"></i>股票查詢</h4>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <form method="post" asp-action="Query" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">股票代號</label>
+                <input type="text" name="Symbol" value="@Model.Symbol" class="form-control"
+                       placeholder="例：2330、2317" id="symbolInput" autocomplete="off" />
+                <div id="autocomplete-list" class="list-group position-absolute z-3" style="width:auto; min-width:200px;"></div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">查詢天數</label>
+                <select name="Days" class="form-select">
+                    <option value="20" selected="@(Model.Days == 20)">近20日</option>
+                    <option value="60" selected="@(Model.Days == 60 || Model.Days == 0)">近60日</option>
+                    <option value="90" selected="@(Model.Days == 90)">近90日</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search me-1"></i>查詢
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage</div>
+}
+
+@if (Model.Detail != null)
+{
+    var d = Model.Detail;
+    var isUp = d.LatestChangePercent > 0;
+    var isDown = d.LatestChangePercent < 0;
+    var changeColor = isUp ? "text-danger" : isDown ? "text-success" : "text-muted";
+    var changeIcon = isUp ? "bi-caret-up-fill" : isDown ? "bi-caret-down-fill" : "bi-dash";
+
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <h5 class="fw-bold mb-0">@d.Symbol <span class="text-muted">@d.Name</span>
+                        <span class="badge bg-secondary ms-2 fs-6">@d.Market</span>
+                        <span class="badge bg-light text-dark ms-1 fs-6">@d.Industry</span>
+                    </h5>
+                </div>
+                <a asp-action="ExportExcel" asp-route-symbol="@d.Symbol" asp-route-days="@Model.Days"
+                   class="btn btn-success btn-sm">
+                    <i class="bi bi-file-earmark-excel me-1"></i>匯出 Excel
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="text-muted small">收盤價</div>
+                <div class="fs-4 fw-bold @changeColor">@d.LatestClose?.ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="text-muted small">漲跌幅</div>
+                <div class="fs-4 fw-bold @changeColor">
+                    <i class="bi @changeIcon"></i>
+                    @d.LatestChangePercent?.ToString("N2")%
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="text-muted small">成交量(張)</div>
+                <div class="fs-5 fw-bold">@d.LatestVolume?.ToString("N0")</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="text-muted small">均線</div>
+                <div class="small">
+                    <span class="text-warning fw-semibold">MA5: @d.MA5?.ToString("N2")</span><br />
+                    <span class="text-info fw-semibold">MA20: @d.MA20?.ToString("N2")</span><br />
+                    <span class="text-danger fw-semibold">MA60: @d.MA60?.ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">近@Model.Days日走勢圖</h6>
+            <canvas id="priceChart" style="max-height:380px;"></canvas>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">成交量</h6>
+            <canvas id="volumeChart" style="max-height:160px;"></canvas>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3">
+            <h6 class="fw-bold mb-0">每日明細</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>日期</th>
+                            <th class="text-end">收盤</th>
+                            <th class="text-end">漲跌%</th>
+                            <th class="text-end">成交量(張)</th>
+                            <th class="text-end">MA5</th>
+                            <th class="text-end">MA20</th>
+                            <th class="text-end">MA60</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in d.ChartData.OrderByDescending(x => x.Date))
+                        {
+                            var rowColor = p.ChangePercent > 0 ? "text-danger" : p.ChangePercent < 0 ? "text-success" : "";
+                            <tr>
+                                <td>@p.Date</td>
+                                <td class="text-end fw-semibold">@p.Close.ToString("N2")</td>
+                                <td class="text-end @rowColor">
+                                    @(p.ChangePercent > 0 ? "+" : "")@p.ChangePercent.ToString("N2")%
+                                </td>
+                                <td class="text-end">@p.Volume.ToString("N0")</td>
+                                <td class="text-end text-warning">@(p.MA5?.ToString("N2") ?? "-")</td>
+                                <td class="text-end text-info">@(p.MA20?.ToString("N2") ?? "-")</td>
+                                <td class="text-end text-danger">@(p.MA60?.ToString("N2") ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @section Scripts {
+    <script>
+        const rawData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.ChartData));
+        const labels = rawData.map(x => x.date);
+        const closes = rawData.map(x => x.close);
+        const ma5    = rawData.map(x => x.mA5);
+        const ma20   = rawData.map(x => x.mA20);
+        const ma60   = rawData.map(x => x.mA60);
+        const vols   = rawData.map(x => x.volume);
+        const changes= rawData.map(x => x.changePercent);
+
+        new Chart(document.getElementById('priceChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: '收盤價', data: closes, borderColor: '#0d6efd', borderWidth: 2, pointRadius: 1, tension: 0.1, fill: false },
+                    { label: 'MA5',   data: ma5,    borderColor: '#ffc107', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false },
+                    { label: 'MA20',  data: ma20,   borderColor: '#0dcaf0', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false },
+                    { label: 'MA60',  data: ma60,   borderColor: '#dc3545', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false },
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+
+        new Chart(document.getElementById('volumeChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: '成交量(張)',
+                    data: vols,
+                    backgroundColor: changes.map(c => c >= 0 ? 'rgba(220,53,69,0.6)' : 'rgba(25,135,84,0.6)'),
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    </script>
+    <script>
+        // 自動完成
+        $('#symbolInput').on('input', function () {
+            const q = $(this).val().trim();
+            if (q.length < 1) { $('#autocomplete-list').empty(); return; }
+            $.getJSON('/Stock/Search', { q }, function (data) {
+                const list = $('#autocomplete-list').empty();
+                data.forEach(item => {
+                    $('<a class="list-group-item list-group-item-action py-1 small"></a>')
+                        .text(item.label)
+                        .on('click', function () {
+                            $('#symbolInput').val(item.symbol);
+                            list.empty();
+                        })
+                        .appendTo(list);
+                });
+            });
+        });
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#symbolInput, #autocomplete-list').length)
+                $('#autocomplete-list').empty();
+        });
+    </script>
+    }
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-bar-chart-line display-4 mb-3 d-block"></i>
+            請輸入股票代號開始查詢
+            <div class="mt-3 small">支援股票：2330 台積電、2317 鴻海、2454 聯發科 等</div>
+        </div>
+    </div>
+}

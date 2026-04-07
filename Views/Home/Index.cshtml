@@ -1,0 +1,94 @@
+﻿@{
+    ViewData["Title"] = "首頁";
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
+            <div class="card-body py-5 text-white text-center">
+                <i class="bi bi-graph-up-arrow display-3 mb-3"></i>
+                <h1 class="display-5 fw-bold mb-3">台股盤後分析系統</h1>
+                <p class="lead mb-4 opacity-75">提供盤後行情查詢、技術指標分析與每日強勢股篩選</p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a asp-controller="Stock" asp-action="Query" class="btn btn-warning btn-lg fw-bold px-4">
+                        <i class="bi bi-search me-2"></i>股票查詢
+                    </a>
+                    <a asp-controller="Screening" asp-action="Index" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-funnel-fill me-2"></i>每日篩選
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:64px;height:64px;">
+                    <i class="bi bi-search text-primary fs-3"></i>
+                </div>
+                <h5 class="fw-bold">股票查詢</h5>
+                <p class="text-muted small">輸入股票代號，查看近60日收盤價走勢與 MA5、MA20、MA60 均線圖表，並可匯出 Excel。</p>
+                <a asp-controller="Stock" asp-action="Query" class="btn btn-primary btn-sm">前往查詢</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:64px;height:64px;">
+                    <i class="bi bi-funnel-fill text-success fs-3"></i>
+                </div>
+                <h5 class="fw-bold">每日篩選</h5>
+                <p class="text-muted small">自動篩選當日成交量 &gt; 20日均量 × 1.5，且收盤價 &gt; MA20 的強勢股，可匯出 Excel。</p>
+                <a asp-controller="Screening" asp-action="Index" class="btn btn-success btn-sm">查看篩選</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:64px;height:64px;">
+                    <i class="bi bi-file-earmark-excel text-warning fs-3"></i>
+                </div>
+                <h5 class="fw-bold">Excel 匯出</h5>
+                <p class="text-muted small">所有查詢與篩選結果均支援一鍵匯出 Excel，方便離線分析與分享。</p>
+                <span class="badge bg-warning text-dark">內建功能</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-info-circle text-primary me-2"></i>篩選條件說明</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="badge bg-danger mt-1">條件1</span>
+                            <div>
+                                <strong>成交量突破</strong>
+                                <p class="text-muted small mb-0">當日成交量 &gt; 近20日均量 × 1.5，代表市場異常放量，法人或大戶介入信號。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="badge bg-success mt-1">條件2</span>
+                            <div>
+                                <strong>站上均線</strong>
+                                <p class="text-muted small mb-0">收盤價 &gt; MA20（20日均線），代表短期趨勢多方，有上攻動能。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
