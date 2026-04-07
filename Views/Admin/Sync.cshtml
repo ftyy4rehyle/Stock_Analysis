@@ -1,0 +1,212 @@
+@{
+    ViewData["Title"] = "資料同步管理";
+}
+
+<div class="row mb-3">
+    <div class="col">
+        <h4 class="fw-bold"><i class="bi bi-cloud-download text-primary me-2"></i>資料同步管理</h4>
+        <p class="text-muted small mb-0">從台灣證券交易所（TWSE）抓取真實行情資料</p>
+    </div>
+</div>
+
+<!-- 狀態卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="text-muted small">股票主檔</div>
+            <div class="fs-4 fw-bold text-primary">@ViewBag.StockCount</div>
+            <div class="text-muted" style="font-size:.75rem;">檔上市股票</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="text-muted small">有行情資料</div>
+            <div class="fs-4 fw-bold text-success">@ViewBag.StocksWithData</div>
+            <div class="text-muted" style="font-size:.75rem;">檔已同步</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="text-muted small">行情筆數</div>
+            <div class="fs-4 fw-bold">@ViewBag.QuoteCount.ToString("N0")</div>
+            <div class="text-muted" style="font-size:.75rem;">筆日行情</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="text-muted small">最新日期</div>
+            <div class="fs-6 fw-bold">@ViewBag.LatestDate</div>
+            <div class="text-muted" style="font-size:.75rem;">最後一筆</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- 批次同步 -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 pt-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-stack text-primary me-2"></i>批次同步行情</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">依今日成交量排名，同步前 N 檔股票的近期行情，並自動計算 MA5/MA20/MA60 與篩選結果。</p>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">同步檔數</label>
+                        <select id="topN" class="form-select form-select-sm">
+                            <option value="20">前 20 檔</option>
+                            <option value="50" selected>前 50 檔（建議）</option>
+                            <option value="100">前 100 檔</option>
+                            <option value="200">前 200 檔</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">回溯月數</label>
+                        <select id="monthsBack" class="form-select form-select-sm">
+                            <option value="1">近1個月</option>
+                            <option value="3" selected>近3個月</option>
+                            <option value="6">近6個月</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="btnSyncAll" class="btn btn-primary w-100" onclick="startSyncAll()">
+                    <i class="bi bi-cloud-download me-1"></i>開始批次同步
+                </button>
+                <div id="syncAllMsg" class="mt-2 small text-muted"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 單股同步 -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 pt-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-search text-success me-2"></i>同步指定股票</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">輸入股票代號，同步近3個月行情並重算技術指標。適合快速更新單一股票。</p>
+                <div class="input-group mb-3">
+                    <input type="text" id="syncSymbol" class="form-control" placeholder="輸入代號，如 2330" maxlength="6" />
+                    <button class="btn btn-success" onclick="syncOne()">
+                        <i class="bi bi-cloud-arrow-down me-1"></i>同步
+                    </button>
+                </div>
+                <div id="syncOneMsg" class="small"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 更新股票主檔 -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-list-ul text-warning me-2"></i>更新股票主檔</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">從 TWSE 重新抓取所有上市公司清單（代號、名稱、產業別），新股上市時使用。不影響現有行情資料。</p>
+                <button class="btn btn-warning w-100" onclick="refreshList()">
+                    <i class="bi bi-arrow-repeat me-1"></i>更新股票清單
+                </button>
+                <div id="refreshListMsg" class="mt-2 small text-muted"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 即時進度 -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" id="progressCard" style="display:none;">
+            <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0"><i class="bi bi-activity text-danger me-2"></i>同步進度</h6>
+                <span id="syncRunning" class="badge bg-danger">執行中</span>
+            </div>
+            <div class="card-body">
+                <div id="progressLog"
+                     style="height:180px;overflow-y:auto;font-size:.78rem;background:#f8f9fa;padding:8px;border-radius:4px;font-family:monospace;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 p-3 bg-light border rounded small text-muted">
+    <i class="bi bi-info-circle me-1"></i>
+    資料來源：台灣證券交易所（TWSE）Open API。每次同步會在請求間加入延遲以避免觸發限流。
+    批次同步 50 檔 × 3 個月約需 <strong>1~3 分鐘</strong>，請耐心等候。
+</div>
+
+@section Scripts {
+<script>
+    let pollTimer = null;
+
+    function startSyncAll() {
+        const topN = $('#topN').val();
+        const monthsBack = $('#monthsBack').val();
+        $('#btnSyncAll').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>啟動中...');
+
+        $.post('/Admin/SyncAll', { topN, monthsBack }, function (r) {
+            $('#syncAllMsg').text(r.message);
+            if (r.ok) {
+                $('#progressCard').show();
+                startPolling();
+            } else {
+                $('#btnSyncAll').prop('disabled', false).html('<i class="bi bi-cloud-download me-1"></i>開始批次同步');
+            }
+        });
+    }
+
+    function syncOne() {
+        const symbol = $('#syncSymbol').val().trim();
+        if (!symbol) { alert('請輸入股票代號'); return; }
+
+        $('#syncOneMsg').html('<span class="text-primary"><i class="bi bi-hourglass-split me-1"></i>同步中，請稍候...</span>');
+
+        $.post('/Admin/SyncOne', { symbol }, function (r) {
+            $('#syncOneMsg').html(`<span class="text-success"><i class="bi bi-check-circle me-1"></i>${r.message}</span>`);
+        }).fail(function (xhr) {
+            const msg = xhr.responseJSON?.message ?? '發生錯誤';
+            $('#syncOneMsg').html(`<span class="text-danger"><i class="bi bi-x-circle me-1"></i>${msg}</span>`);
+        });
+    }
+
+    function refreshList() {
+        if (!confirm('確定要更新股票主檔嗎？')) return;
+        $('#refreshListMsg').text('更新中...');
+        $.post('/Admin/RefreshStockList', function (r) {
+            $('#refreshListMsg').text(r.message);
+        });
+    }
+
+    function startPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(pollProgress, 2000);
+    }
+
+    function pollProgress() {
+        $.get('/Admin/SyncProgress', function (data) {
+            const log = $('#progressLog');
+            log.html(data.log.map(l => `<div>${l}</div>`).join(''));
+            log.scrollTop(log[0].scrollHeight);
+
+            if (!data.isRunning) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+                $('#syncRunning').removeClass('bg-danger').addClass('bg-secondary').text('已完成');
+                $('#btnSyncAll').prop('disabled', false).html('<i class="bi bi-cloud-download me-1"></i>開始批次同步');
+                if (data.finishedAt) {
+                    $('#syncAllMsg').text(`完成時間：${data.finishedAt}`);
+                }
+            }
+        });
+    }
+
+    // 頁面載入時檢查是否有同步在執行
+    $(function () {
+        $.get('/Admin/SyncProgress', function (data) {
+            if (data.isRunning) {
+                $('#progressCard').show();
+                startPolling();
+            }
+        });
+    });
+</script>
+}
