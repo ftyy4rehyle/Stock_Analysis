@@ -27,4 +27,6 @@ public class DailyChartPoint
     public long Volume { get; set; }
     public decimal Change { get; set; }
     public decimal ChangePercent { get; set; }
+    public bool IsBuySignal { get; set; }
+    public bool IsSellSignal { get; set; }
 }

@@ -154,6 +154,7 @@
                                 <th class="text-end">MA5</th>
                                 <th class="text-end">MA20</th>
                                 <th class="text-end">MA60</th>
+                                <th class="text-center">訊號</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -170,6 +171,16 @@
                                     <td class="text-end text-warning">@(p.MA5?.ToString("N2") ?? "-")</td>
                                     <td class="text-end text-info">@(p.MA20?.ToString("N2") ?? "-")</td>
                                     <td class="text-end text-danger">@(p.MA60?.ToString("N2") ?? "-")</td>
+                                    <td class="text-center">
+                                        @if (p.IsBuySignal)
+                                        {
+                                            <span class="badge bg-success" title="買進訊號">買 ▲</span>
+                                        }
+                                        else if (p.IsSellSignal)
+                                        {
+                                            <span class="badge bg-danger" title="賣出訊號">賣 ▼</span>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -230,21 +241,102 @@ else
             const vols    = rawData.map(x => x.volume);
             const changes = rawData.map(x => x.changePercent);
 
+            // 買賣訊號：只在訊號當日填入收盤價，其餘為 null（Chart.js 不會畫點）
+            const buySignalData  = rawData.map(x => x.isBuySignal  ? x.close : null);
+            const sellSignalData = rawData.map(x => x.isSellSignal ? x.close : null);
+
             new Chart(document.getElementById('priceChart'), {
                 type: 'line',
                 data: {
                     labels,
                     datasets: [
-                        { label: '收盤價', data: closes, borderColor: '#0d6efd', borderWidth: 2, pointRadius: 1, tension: 0.1, fill: false },
-                        { label: 'MA5',   data: ma5,    borderColor: '#ffc107', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false, spanGaps: true },
-                        { label: 'MA20',  data: ma20,   borderColor: '#0dcaf0', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false, spanGaps: true },
-                        { label: 'MA60',  data: ma60,   borderColor: '#dc3545', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false, spanGaps: true },
+                        {
+                            label: '收盤價',
+                            data: closes,
+                            borderColor: '#0d6efd',
+                            borderWidth: 2,
+                            pointRadius: 1,
+                            tension: 0.1,
+                            fill: false,
+                            order: 4
+                        },
+                        {
+                            label: 'MA5',
+                            data: ma5,
+                            borderColor: '#ffc107',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.1,
+                            fill: false,
+                            spanGaps: true,
+                            order: 3
+                        },
+                        {
+                            label: 'MA20',
+                            data: ma20,
+                            borderColor: '#0dcaf0',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.1,
+                            fill: false,
+                            spanGaps: true,
+                            order: 2
+                        },
+                        {
+                            label: 'MA60',
+                            data: ma60,
+                            borderColor: '#dc3545',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.1,
+                            fill: false,
+                            spanGaps: true,
+                            order: 1
+                        },
+                        // ── 買進訊號：綠點 ──────────────────────────────
+                        {
+                            label: '買進訊號',
+                            data: buySignalData,
+                            borderColor: 'transparent',
+                            backgroundColor: '#198754',
+                            showLine: false,
+                            spanGaps: false,
+                            pointRadius: buySignalData.map(v => v !== null ? 10 : 0),
+                            pointHoverRadius: buySignalData.map(v => v !== null ? 12 : 0),
+                            pointStyle: 'circle',
+                            order: 0
+                        },
+                        // ── 賣出訊號：紅點 ──────────────────────────────
+                        {
+                            label: '賣出訊號',
+                            data: sellSignalData,
+                            borderColor: 'transparent',
+                            backgroundColor: '#dc3545',
+                            showLine: false,
+                            spanGaps: false,
+                            pointRadius: sellSignalData.map(v => v !== null ? 10 : 0),
+                            pointHoverRadius: sellSignalData.map(v => v !== null ? 12 : 0),
+                            pointStyle: 'circle',
+                            order: 0
+                        },
                     ]
                 },
                 options: {
                     responsive: true,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { position: 'top' } },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                // 訊號 tooltip 只在有值時顯示
+                                label: function(ctx) {
+                                    if ((ctx.dataset.label === '買進訊號' || ctx.dataset.label === '賣出訊號')
+                                        && ctx.raw === null) return null;
+                                    return ` ${ctx.dataset.label}: ${ctx.raw !== null ? ctx.raw : ''}`;
+                                }
+                            }
+                        }
+                    },
                     scales: { y: { beginAtZero: false } }
                 }
             });

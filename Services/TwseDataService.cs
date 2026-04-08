@@ -231,45 +231,90 @@ public class TwseDataService : ITwseDataService
         if (quotes.Count == 0) return;
 
         var newIndicators = new List<TechnicalIndicator>();
-        var newScreens = new List<DailyScreenResult>();
+        var newScreens    = new List<DailyScreenResult>();
 
+        // ── Pass 1：計算 MA 指標 ────────────────────────────────────────
         for (int i = 0; i < quotes.Count; i++)
         {
             var q = quotes[i];
 
-            decimal? ma5 = i >= 4 ? quotes.Skip(i - 4).Take(5).Average(x => x.Close) : null;
-            decimal? ma20 = i >= 19 ? quotes.Skip(i - 19).Take(20).Average(x => x.Close) : null;
-            decimal? ma60 = i >= 59 ? quotes.Skip(i - 59).Take(60).Average(x => x.Close) : null;
+            decimal? ma5 = i >= 4
+                ? quotes.Skip(i - 4).Take(5).Average(x => x.Close) : null;
+            decimal? ma20 = i >= 19
+                ? quotes.Skip(i - 19).Take(20).Average(x => x.Close) : null;
+            decimal? ma60 = i >= 59
+                ? quotes.Skip(i - 59).Take(60).Average(x => x.Close) : null;
             decimal? avgVol20 = i >= 19
                 ? (decimal)quotes.Skip(i - 19).Take(20).Average(x => (double)x.Volume)
                 : null;
 
             newIndicators.Add(new TechnicalIndicator
             {
-                StockId = stockId,
-                TradeDate = q.TradeDate,
-                MA5 = ma5.HasValue ? Math.Round(ma5.Value, 2) : null,
-                MA20 = ma20.HasValue ? Math.Round(ma20.Value, 2) : null,
-                MA60 = ma60.HasValue ? Math.Round(ma60.Value, 2) : null,
+                StockId     = stockId,
+                TradeDate   = q.TradeDate,
+                MA5         = ma5.HasValue     ? Math.Round(ma5.Value, 2)     : null,
+                MA20        = ma20.HasValue    ? Math.Round(ma20.Value, 2)    : null,
+                MA60        = ma60.HasValue    ? Math.Round(ma60.Value, 2)    : null,
                 AvgVolume20 = avgVol20.HasValue ? Math.Round(avgVol20.Value, 0) : null
             });
 
-            // 篩選條件
+            // 每日篩選（量 > 均量×1.5 且 Close > MA20）
             if (avgVol20.HasValue && ma20.HasValue &&
                 q.Volume > avgVol20.Value * 1.5m &&
                 q.Close > ma20.Value)
             {
                 newScreens.Add(new DailyScreenResult
                 {
-                    StockId = stockId,
-                    ScreenDate = q.TradeDate,
-                    Close = q.Close,
-                    Volume = q.Volume,
-                    AvgVolume20 = Math.Round(avgVol20.Value, 0),
-                    MA20 = Math.Round(ma20.Value, 2),
-                    VolumeRatio = Math.Round((decimal)q.Volume / avgVol20.Value, 2),
+                    StockId      = stockId,
+                    ScreenDate   = q.TradeDate,
+                    Close        = q.Close,
+                    Volume       = q.Volume,
+                    AvgVolume20  = Math.Round(avgVol20.Value, 0),
+                    MA20         = Math.Round(ma20.Value, 2),
+                    VolumeRatio  = Math.Round((decimal)q.Volume / avgVol20.Value, 2),
                     ChangePercent = q.ChangePercent
                 });
+            }
+        }
+
+        // ── Pass 2：計算買賣訊號（需要前日指標，故獨立一輪）───────────────
+        // 買進訊號規則：
+        //   Close > MA20
+        //   MA20 > MA20[i-3]（均線向上）
+        //   MA5 > MA20
+        //   前一交易日 IsBuySignal == false（首次成立才標記）
+        //
+        // 賣出訊號規則：
+        //   當日 Close < MA20
+        //   前一交易日 Close < MA20（連續2日收在MA20下方）
+        //   前一交易日 IsSellSignal == false（首次成立才標記）
+        for (int i = 1; i < newIndicators.Count; i++)
+        {
+            var ind      = newIndicators[i];
+            var prevInd  = newIndicators[i - 1];
+            var q        = quotes[i];
+            var prevQ    = quotes[i - 1];
+
+            if (!ind.MA20.HasValue || !ind.MA5.HasValue) continue;
+
+            // 買進訊號
+            var ma20_3ago = i >= 3 ? newIndicators[i - 3].MA20 : null;
+            if (ma20_3ago.HasValue &&
+                q.Close > ind.MA20.Value &&
+                ind.MA20.Value > ma20_3ago.Value &&
+                ind.MA5.Value > ind.MA20.Value &&
+                !prevInd.IsBuySignal)
+            {
+                ind.IsBuySignal = true;
+            }
+
+            // 賣出訊號
+            if (prevInd.MA20.HasValue &&
+                q.Close < ind.MA20.Value &&
+                prevQ.Close < prevInd.MA20.Value &&
+                !prevInd.IsSellSignal)
+            {
+                ind.IsSellSignal = true;
             }
         }
 

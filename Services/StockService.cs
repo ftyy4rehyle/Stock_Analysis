@@ -41,14 +41,16 @@ public class StockService : IStockService
             indicators.TryGetValue(q.TradeDate, out var ind);
             return new DailyChartPoint
             {
-                Date = q.TradeDate.ToString("yyyy/MM/dd"),
-                Close = q.Close,
-                MA5 = ind?.MA5,
-                MA20 = ind?.MA20,
-                MA60 = ind?.MA60,
-                Volume = q.Volume,
-                Change = q.Change,
-                ChangePercent = q.ChangePercent
+                Date          = q.TradeDate.ToString("yyyy/MM/dd"),
+                Close         = q.Close,
+                MA5           = ind?.MA5,
+                MA20          = ind?.MA20,
+                MA60          = ind?.MA60,
+                Volume        = q.Volume,
+                Change        = q.Change,
+                ChangePercent = q.ChangePercent,
+                IsBuySignal   = ind?.IsBuySignal  ?? false,
+                IsSellSignal  = ind?.IsSellSignal ?? false
             };
         }).ToList();
 
