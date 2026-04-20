@@ -1,0 +1,86 @@
+@{
+    ViewData["Title"] = "回測";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="fw-bold"><i class="bi bi-clock-history text-warning me-2"></i>買賣訊號回測</h4>
+        <p class="text-muted small mb-0">依據 BuySignal / SellSignal 模擬歷史交易，評估策略績效</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <form asp-action="Search" method="post" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">股票代號</label>
+                <div class="position-relative">
+                    <input type="text" name="symbol" class="form-control"
+                           placeholder="例：2330、2317" id="btSymbolInput" autocomplete="off" />
+                    <div id="bt-autocomplete" class="list-group position-absolute w-100 z-3"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-warning w-100 fw-bold">
+                    <i class="bi bi-clock-history me-1"></i>開始回測
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>回測規則說明</h6>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="d-flex gap-2">
+                    <span class="badge bg-success mt-1">買進</span>
+                    <div class="small text-muted">
+                        遇到 <strong>BuySignal = true</strong> 時，以當日<strong>收盤價</strong>買進。<br />
+                        條件：Close &gt; MA20、MA20 上升、MA5 &gt; MA20、前日未觸發。
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex gap-2">
+                    <span class="badge bg-danger mt-1">賣出</span>
+                    <div class="small text-muted">
+                        持股時遇到 <strong>SellSignal = true</strong>，以當日<strong>收盤價</strong>賣出。<br />
+                        條件：連續 2 日 Close &lt; MA20，且前日未觸發。
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="alert alert-light border mb-0 small">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    本回測<strong>不考慮</strong>手續費、交易稅、滑價，僅供策略方向參考，不構成投資建議。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    $('#btSymbolInput').on('input', function () {
+        const q = $(this).val().trim();
+        if (q.length < 1) { $('#bt-autocomplete').empty(); return; }
+        $.getJSON('/Backtest/SearchJson', { q }, function (data) {
+            const list = $('#bt-autocomplete').empty();
+            data.forEach(item => {
+                $('<a class="list-group-item list-group-item-action py-1 small"></a>')
+                    .text(item.label)
+                    .on('click', function () {
+                        $('#btSymbolInput').val(item.symbol);
+                        list.empty();
+                    }).appendTo(list);
+            });
+        });
+    });
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('#btSymbolInput, #bt-autocomplete').length)
+            $('#bt-autocomplete').empty();
+    });
+</script>
+}

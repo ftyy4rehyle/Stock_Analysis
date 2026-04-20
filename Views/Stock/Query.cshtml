@@ -59,13 +59,19 @@
                     <span class="badge bg-secondary ms-2">@d.Market</span>
                     <span class="badge bg-light text-dark ms-1">@d.Industry</span>
                 </h5>
-                @if (hasData)
-                {
-                    <a asp-action="ExportExcel" asp-route-symbol="@d.Symbol" asp-route-days="@Model.Days"
-                       class="btn btn-success btn-sm">
-                        <i class="bi bi-file-earmark-excel me-1"></i>匯出 Excel
+                <div class="d-flex gap-2">
+                    <a asp-controller="Backtest" asp-action="Detail" asp-route-symbol="@d.Symbol"
+                       class="btn btn-warning btn-sm">
+                        <i class="bi bi-clock-history me-1"></i>回測
                     </a>
-                }
+                    @if (hasData)
+                    {
+                        <a asp-action="ExportExcel" asp-route-symbol="@d.Symbol" asp-route-days="@Model.Days"
+                           class="btn btn-success btn-sm">
+                            <i class="bi bi-file-earmark-excel me-1"></i>匯出 Excel
+                        </a>
+                    }
+                </div>
             </div>
         </div>
 

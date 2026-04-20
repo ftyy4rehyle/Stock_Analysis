@@ -23,6 +23,7 @@ builder.Services.AddHttpClient<ITwseDataService, TwseDataService>(client =>
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IScreeningService, ScreeningService>();
 builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
+builder.Services.AddScoped<IBacktestService, BacktestService>();
 
 var app = builder.Build();
 

@@ -1,0 +1,265 @@
+@model StockAnalysis.ViewModels.BacktestViewModel
+@{
+    ViewData["Title"] = $"回測 - {Model.Symbol}";
+    var s = Model.Summary;
+    var totalColor  = s.TotalProfitPercent >= 0 ? "text-danger" : "text-success";
+    var avgColor    = s.AvgProfitPercent   >= 0 ? "text-danger" : "text-success";
+    var winRateColor = s.WinRate >= 50 ? "text-danger" : "text-success";
+}
+
+<div class="row mb-3 align-items-center">
+    <div class="col">
+        <h4 class="fw-bold mb-0">
+            <i class="bi bi-clock-history text-warning me-2"></i>回測結果
+            @if (!string.IsNullOrEmpty(Model.Symbol))
+            {
+                <span class="ms-2">@Model.Symbol <span class="text-muted fw-normal">@Model.Name</span>
+                <span class="badge bg-light text-dark ms-1">@Model.Industry</span></span>
+            }
+        </h4>
+        @if (Model.DataFrom.HasValue)
+        {
+            <div class="text-muted small mt-1">
+                資料區間：@Model.DataFrom.Value.ToString("yyyy/MM/dd") ～ @Model.DataTo?.ToString("yyyy/MM/dd")
+            </div>
+        }
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>重新查詢
+        </a>
+        <a asp-controller="Stock" asp-action="Query" asp-route-symbol="@Model.Symbol"
+           class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-bar-chart-line me-1"></i>查看走勢圖
+        </a>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
+        @if (Model.ErrorMessage.Contains("同步"))
+        {
+            <a asp-controller="Admin" asp-action="Sync" class="alert-link ms-2">前往同步</a>
+        }
+    </div>
+}
+else if (!Model.HasData)
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-inbox display-4 mb-3 d-block"></i>
+            <p class="mb-1">在現有資料區間內，沒有找到任何完成的交易。</p>
+            <small>可能原因：資料期間太短、訊號從未同時觸發，或尚未同步足夠的歷史行情。</small>
+            @if (s.HasOpenPosition)
+            {
+                <div class="mt-3 alert alert-info d-inline-block text-start">
+                    <i class="bi bi-hourglass-split me-1"></i>
+                    目前有未平倉部位：買進日 @s.OpenBuyDate?.ToString("yyyy/MM/dd")，
+                    買進價 @s.OpenBuyPrice?.ToString("N2")，尚未出現賣出訊號。
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <!-- ── 摘要卡片 ─────────────────────────────────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small">交易次數</div>
+                <div class="fs-3 fw-bold">@s.TotalTrades</div>
+                <div class="text-muted" style="font-size:.75rem;">筆</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small">勝率</div>
+                <div class="fs-3 fw-bold @winRateColor">@s.WinRate.ToString("N1")%</div>
+                <div class="text-muted" style="font-size:.75rem;">@s.WinTrades 勝 / @(s.TotalTrades - s.WinTrades) 敗</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small">平均報酬</div>
+                <div class="fs-3 fw-bold @avgColor">
+                    @(s.AvgProfitPercent >= 0 ? "+" : "")@s.AvgProfitPercent.ToString("N2")%
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small">複利總報酬</div>
+                <div class="fs-3 fw-bold @totalColor">
+                    @(s.TotalProfitPercent >= 0 ? "+" : "")@s.TotalProfitPercent.ToString("N2")%
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small">最大單筆獲利</div>
+                <div class="fs-3 fw-bold text-danger">+@s.MaxProfit.ToString("N2")%</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small">最大單筆虧損</div>
+                <div class="fs-3 fw-bold text-success">@s.MaxLoss.ToString("N2")%</div>
+            </div>
+        </div>
+    </div>
+
+    @if (s.HasOpenPosition)
+    {
+        <div class="alert alert-info d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-hourglass-split fs-5"></i>
+            <div>
+                <strong>未平倉部位</strong>（不計入統計）：
+                買進日 @s.OpenBuyDate?.ToString("yyyy/MM/dd")，
+                買進價 <strong>@s.OpenBuyPrice?.ToString("N2")</strong>，尚未出現賣出訊號。
+            </div>
+        </div>
+    }
+
+    <!-- ── 績效圖表 ─────────────────────────────────────────── -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">各筆交易報酬率</h6>
+                    <canvas id="profitChart" style="max-height:220px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">複利累積報酬曲線</h6>
+                    <canvas id="cumulChart" style="max-height:220px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 交易明細表 ──────────────────────────────────────── -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0">交易明細（共 @Model.Trades.Count 筆）</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th>買進日</th>
+                            <th class="text-end">買進價</th>
+                            <th>賣出日</th>
+                            <th class="text-end">賣出價</th>
+                            <th class="text-end">報酬率</th>
+                            <th class="text-end">持有天數</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in Model.Trades)
+                        {
+                            var profitCss = t.ProfitPercent > 0 ? "text-danger fw-bold"
+                                          : t.ProfitPercent < 0 ? "text-success fw-bold" : "";
+                            var holdDays  = t.SellDate.DayNumber - t.BuyDate.DayNumber;
+                            <tr>
+                                <td class="text-center text-muted">@t.No</td>
+                                <td>@t.BuyDate.ToString("yyyy/MM/dd")</td>
+                                <td class="text-end">@t.BuyPrice.ToString("N2")</td>
+                                <td>@t.SellDate.ToString("yyyy/MM/dd")</td>
+                                <td class="text-end">@t.SellPrice.ToString("N2")</td>
+                                <td class="text-end @profitCss">
+                                    @(t.ProfitPercent > 0 ? "+" : "")@t.ProfitPercent.ToString("N2")%
+                                </td>
+                                <td class="text-end text-muted">@holdDays 天</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+@if (Model.HasData)
+{
+    var labelsJson  = System.Text.Json.JsonSerializer.Serialize(Model.TradeLabels);
+    var profitsJson = System.Text.Json.JsonSerializer.Serialize(Model.TradeProfits);
+    var cumulJson   = System.Text.Json.JsonSerializer.Serialize(Model.CumulativeReturns);
+    <script>
+    (function () {
+        const labels  = @Html.Raw(labelsJson);
+        const profits = @Html.Raw(profitsJson);
+        const cumul   = @Html.Raw(cumulJson);
+
+        // 各筆報酬 bar chart
+        new Chart(document.getElementById('profitChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: '報酬率 (%)',
+                    data: profits,
+                    backgroundColor: profits.map(v => v >= 0 ? 'rgba(220,53,69,0.7)' : 'rgba(25,135,84,0.7)'),
+                    borderRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => v + '%' }
+                    }
+                }
+            }
+        });
+
+        // 累積報酬曲線
+        const zeroLine = new Array(labels.length).fill(0);
+        new Chart(document.getElementById('cumulChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: '累積報酬 (%)',
+                        data: cumul,
+                        borderColor: cumul[cumul.length - 1] >= 0 ? '#dc3545' : '#198754',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        fill: { target: { value: 0 }, above: 'rgba(220,53,69,0.08)', below: 'rgba(25,135,84,0.08)' },
+                        tension: 0.2
+                    },
+                    {
+                        label: '損益平衡',
+                        data: zeroLine,
+                        borderColor: '#6c757d',
+                        borderWidth: 1,
+                        borderDash: [4, 4],
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    y: { ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    })();
+    </script>
+}
+}
