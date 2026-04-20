@@ -239,13 +239,13 @@ else
     <script>
         (function () {
             const rawData = @Html.Raw(chartJson);
-            const labels  = rawData.map(x => x.date);
-            const closes  = rawData.map(x => x.close);
-            const ma5     = rawData.map(x => x.mA5);
-            const ma20    = rawData.map(x => x.mA20);
-            const ma60    = rawData.map(x => x.mA60);
-            const vols    = rawData.map(x => x.volume);
-            const changes = rawData.map(x => x.changePercent);
+            const labels  = rawData.map(x => x.Date);
+            const closes  = rawData.map(x => x.Close);
+            const ma5     = rawData.map(x => x.MA5);
+            const ma20    = rawData.map(x => x.MA20);
+            const ma60    = rawData.map(x => x.MA60);
+            const vols    = rawData.map(x => x.Volume);
+            const changes = rawData.map(x => x.ChangePercent);
 
             // 買賣訊號：只在訊號當日填入收盤價，其餘為 null（Chart.js 不會畫點）
             const buySignalData  = rawData.map(x => x.isBuySignal  ? x.close : null);
