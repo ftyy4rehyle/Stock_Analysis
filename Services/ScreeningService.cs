@@ -23,21 +23,21 @@ public class ScreeningService : IScreeningService
             .AsNoTracking()
             .Include(r => r.Stock)
             .Where(r => r.ScreenDate == targetDate)
-            .OrderByDescending(r => r.VolumeRatio)
             .Select(r => new ScreeningResultViewModel
             {
-                Symbol = r.Stock.Symbol,
-                Name = r.Stock.Name,
-                Industry = r.Stock.Industry,
-                ScreenDate = r.ScreenDate,
-                Close = r.Close,
-                Volume = r.Volume,
-                AvgVolume20 = r.AvgVolume20,
-                VolumeRatio = r.VolumeRatio,
-                MA20 = r.MA20,
+                Symbol        = r.Stock.Symbol,
+                Name          = r.Stock.Name,
+                Industry      = r.Stock.Industry,
+                ScreenDate    = r.ScreenDate,
+                Close         = r.Close,
+                Volume        = r.Volume,
+                AvgVolume20   = r.AvgVolume20,
+                VolumeRatio   = r.VolumeRatio,
+                MA20          = r.MA20,
                 ChangePercent = r.ChangePercent
             })
-            .ToListAsync();
+            .ToListAsync()
+            .ContinueWith(t => t.Result.OrderByDescending(r => r.VolumeRatio).ToList());
     }
 
     public async Task<List<DateOnly>> GetAvailableDatesAsync(int count = 30)
