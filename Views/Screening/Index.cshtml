@@ -1,4 +1,5 @@
 @model StockAnalysis.ViewModels.ScreeningPageViewModel
+@using StockAnalysis.Services
 @{
     ViewData["Title"] = "每日篩選";
 }
@@ -75,7 +76,7 @@
                             <tr>
                                 <td class="fw-bold">@r.Symbol</td>
                                 <td>@r.Name</td>
-                                <td><span class="badge bg-light text-dark">@(r.Industry ?? "-")</span></td>
+                                <td><span class="badge bg-light text-dark">@TwseIndustryHelper.Resolve(r.Industry)</span></td>
                                 <td class="text-end fw-semibold">@r.Close.ToString("N2")</td>
                                 <td class="text-end @upCss">
                                     @(r.ChangePercent > 0 ? "+" : "")@r.ChangePercent.ToString("N2")%

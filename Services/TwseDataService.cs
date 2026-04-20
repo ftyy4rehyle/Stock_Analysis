@@ -33,9 +33,10 @@ public class TwseDataService : ITwseDataService
 
             foreach (var el in doc.RootElement.EnumerateArray())
             {
-                var code = el.TryGetProperty("公司代號", out var c) ? c.GetString() ?? "" : "";
-                var name = el.TryGetProperty("公司簡稱", out var n) ? n.GetString() ?? "" : "";
-                var industry = el.TryGetProperty("產業別", out var i) ? i.GetString() ?? "" : "";
+                var code     = el.TryGetProperty("公司代號", out var c) ? c.GetString() ?? "" : "";
+                var name     = el.TryGetProperty("公司簡稱", out var n) ? n.GetString() ?? "" : "";
+                var rawInd   = el.TryGetProperty("產業別",   out var i) ? i.GetString() ?? "" : "";
+                var industry = TwseIndustryHelper.Resolve(rawInd);  // 代碼 → 中文
 
                 // 只取4碼純數字（普通股，排除ETF/受益憑證等）
                 if (code.Length == 4 && code.All(char.IsDigit) && !string.IsNullOrEmpty(name))

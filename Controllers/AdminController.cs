@@ -148,6 +148,26 @@ public class AdminController : Controller
         await _db.SaveChangesAsync();
         return Json(new { ok = true, message = $"股票主檔更新完成：新增 {added} 檔，更新 {updated} 檔，共 {list.Count} 檔" });
     }
+
+    /// <summary>修正 DB 中仍為數字代碼的產業別欄位 → 中文名稱</summary>
+    [HttpPost]
+    public async Task<IActionResult> FixIndustryNames()
+    {
+        var stocks = await _db.Stocks.ToListAsync();
+        int fixed_ = 0;
+
+        foreach (var s in stocks)
+        {
+            if (TwseIndustryHelper.IsCode(s.Industry))
+            {
+                s.Industry = TwseIndustryHelper.Resolve(s.Industry);
+                fixed_++;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        return Json(new { ok = true, message = $"產業別修正完成，共修正 {fixed_} 筆" });
+    }
 }
 
 public class SyncStatus

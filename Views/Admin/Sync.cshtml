@@ -104,9 +104,15 @@
             </div>
             <div class="card-body">
                 <p class="text-muted small">從 TWSE 重新抓取所有上市公司清單（代號、名稱、產業別），新股上市時使用。不影響現有行情資料。</p>
-                <button class="btn btn-warning w-100" onclick="refreshList()">
-                    <i class="bi bi-arrow-repeat me-1"></i>更新股票清單
-                </button>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-warning flex-fill" onclick="refreshList()">
+                        <i class="bi bi-arrow-repeat me-1"></i>更新股票清單
+                    </button>
+                    <button class="btn btn-outline-secondary flex-fill" onclick="fixIndustry()"
+                            title="將 DB 中仍為數字代碼的產業別欄位修正為中文">
+                        <i class="bi bi-translate me-1"></i>修正產業代碼→中文
+                    </button>
+                </div>
                 <div id="refreshListMsg" class="mt-2 small text-muted"></div>
             </div>
         </div>
@@ -173,6 +179,15 @@
         $('#refreshListMsg').text('更新中...');
         $.post('/Admin/RefreshStockList', function (r) {
             $('#refreshListMsg').text(r.message);
+        });
+    }
+
+    function fixIndustry() {
+        $('#refreshListMsg').text('修正中...');
+        $.post('/Admin/FixIndustryNames', function (r) {
+            $('#refreshListMsg').html(
+                `<span class="${r.ok ? 'text-success' : 'text-danger'}">${r.message}</span>`
+            );
         });
     }
 
